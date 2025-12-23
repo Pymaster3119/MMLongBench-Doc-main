@@ -1,0 +1,27 @@
+Image -> minimal JSON output.
+
+Tasks:
+- One-sentence summary (<=25 words).
+- Extract ALL canonical entities visible or clearly implied.
+
+Output rules: JSON ONLY. No prose, no Markdown.
+
+Exact schema (order required):
+{
+  "summary": "<one-sentence summary, <= 25 words>",
+  "entities": [
+    {
+      "name": "<canonical name or phrase>",
+      "type": "<Person|Organization|Location|Event|Topic|Object|Date|Other>",
+      "description": "<concise role or relevance, <= 12 words>"
+    }
+  ]
+}
+
+Short rules:
+- Include all meaningful entities; do not cap results.
+- Use canonical names; merge variants.
+- Prefer multi-word when informative; normalize dates.
+- Description <=12 words; include implied entities when clear.
+- Output must be a single JSON object with "summary" then "entities".
+

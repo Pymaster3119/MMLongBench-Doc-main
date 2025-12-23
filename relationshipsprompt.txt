@@ -1,0 +1,19 @@
+Minimal relationship extraction.
+
+Input: image (or description) and canonical entity list.
+Use only the provided canonical entity names.
+
+Output: JSON ONLY. Single object with exact schema:
+{
+  "relationships": [
+    {
+      "subject": "<canonical entity name>",
+      "relation": "<short verb or relation label>",
+      "object": "<canonical entity name>"
+    }
+  ]
+}
+
+Rules (short): include all relations among given entities; deduplicate; use canonical names; mark evidence.
+
+Here are the extracted entities:
