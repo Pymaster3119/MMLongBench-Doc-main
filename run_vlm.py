@@ -1,53 +1,40 @@
 import torch
-from transformers import pipeline, AutoModelForVision2Seq, AutoProcessor, BitsAndBytesConfig
+from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
 import requests
+import time
 
-model_id = "Qwen/Qwen3-VL-2B-Instruct"
-device = "cuda"
+# Device setup
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-bnb_config = BitsAndBytesConfig(
-    load_in_8bit=True,
-    llm_int8_threshold=6.0,
-    llm_int8_has_fp16_weight=False
-)
+# Model & processor
+model_id = "Salesforce/blip-image-captioning-base"
+processor = BlipProcessor.from_pretrained(model_id)
+model = BlipForConditionalGeneration.from_pretrained(model_id)
+model.to(device)
+model.eval()
 
-model = AutoModelForVision2Seq.from_pretrained(
-    model_id,
-    quantization_config=bnb_config,
-    device_map="cuda"
-)
+# Example image
+img_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
+img = Image.open(requests.get(img_url, stream=True).raw).convert("RGB")
 
-processor = AutoProcessor.from_pretrained(model_id)
+# Function to run prompt
+def run_prompt(image, prompt=None):
+    # Preprocess image (and optional prompt)
+    inputs = processor(images=image, return_tensors="pt").to(device)
 
-pipe = pipeline(
-    "image-text-to-text",
-    model=model,
-    processor=processor,
-)
+    # Generate caption
+    with torch.no_grad():
+        output_ids = model.generate(
+            **inputs,
+            do_sample=False
+        )
 
-img = Image.open(requests.get(
-    "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg",
-    stream=True
-).raw).convert("RGB")
+    return processor.decode(output_ids[0], skip_special_tokens=True)
 
-
-def run_prompt(img, prompt):
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": img},
-                {"type": "text", "text": prompt}
-            ]
-        }
-    ]
-
-    output = pipe(
-        text=messages,
-        max_new_tokens=500,
-        temperature=0.1,
-        top_p=0.9
-    )
-
-    return output[0]["generated_text"][-1]["content"]
+# Main
+if __name__ == "__main__":
+    start_time = time.time()
+    caption = run_prompt(img)
+    print("Output:", caption)
+    print("Time taken:", time.time() - start_time, "seconds")
