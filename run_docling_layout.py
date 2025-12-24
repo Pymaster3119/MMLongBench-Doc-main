@@ -47,6 +47,9 @@ def suppress_contained(detections, margin_pixels: float = 10.0):
 
     return filtered
 
+model_id = "HuggingPanda/docling-layout"
+image_processor = RTDetrImageProcessor.from_pretrained(model_id)
+model = RTDetrForObjectDetection.from_pretrained(model_id)
 
 def run_docling_layout(
     image: Image.Image,
@@ -54,9 +57,6 @@ def run_docling_layout(
     margin_pixels: float = 10.0,
     show: bool = True,
 ):
-    model_id = "HuggingPanda/docling-layout"
-    image_processor = RTDetrImageProcessor.from_pretrained(model_id)
-    model = RTDetrForObjectDetection.from_pretrained(model_id)
 
     resize_cfg = {"height": 640, "width": 640}
     inputs = image_processor(images=image, return_tensors="pt", size=resize_cfg)
@@ -71,8 +71,6 @@ def run_docling_layout(
     )
 
     results = suppress_contained(results, margin_pixels=margin_pixels)
-
-    
 
     return results
 

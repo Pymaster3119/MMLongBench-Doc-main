@@ -2,6 +2,7 @@ import torch
 from transformers import DonutProcessor, VisionEncoderDecoderModel
 from PIL import Image
 import requests
+import matplotlib.pyplot as plt
 
 # Choose a UniChart model checkpoint
 model_name = "ahmed-masry/unichart-base-960"
@@ -14,6 +15,9 @@ model.to(device)
 
 
 def process_chart(img):
+    plt.imshow(img)
+    plt.axis("off")
+    plt.show()
     # Craft a summarization prompt
     prompt = "<summarize_chart> <s_answer>"
 
