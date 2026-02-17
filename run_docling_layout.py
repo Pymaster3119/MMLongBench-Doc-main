@@ -5,35 +5,41 @@ import requests
 import matplotlib.pyplot as plt
 
 
-def suppress_contained(detections, margin_pixels: float = 10.0):
-    """Remove boxes fully inside larger, higher-score boxes of the same label."""
+def suppress_contained(detections, margin_pixels: float = 10.0, prefer_inner: bool = True):
     filtered = []
     for result in detections:
         boxes = result["boxes"].tolist()
         scores = result["scores"].tolist()
         labels = result["labels"].tolist()
 
-        keep = []
-        for i, (b_small, s_small, l_small) in enumerate(zip(boxes, scores, labels)):
-            x1s, y1s, x2s, y2s = b_small
-            area_small = (x2s - x1s) * (y2s - y1s)
-            contained = False
-            for j, (b_big, s_big, l_big) in enumerate(zip(boxes, scores, labels)):
-                if i == j or l_small != l_big:
+        suppress = set()
+        for i, (b_i, l_i) in enumerate(zip(boxes, labels)):
+            x1i, y1i, x2i, y2i = b_i
+            area_i = (x2i - x1i) * (y2i - y1i)
+            for j, (b_j, l_j) in enumerate(zip(boxes, labels)):
+                if i == j or l_i != l_j:
                     continue
-                x1b, y1b, x2b, y2b = b_big
-                if (
-                    x1b - margin_pixels <= x1s
-                    and y1b - margin_pixels <= y1s
-                    and x2b + margin_pixels >= x2s
-                    and y2b + margin_pixels >= y2s
-                ):
-                    area_big = (x2b - x1b) * (y2b - y1b)
-                    if area_big > area_small * 1.1:
-                        contained = True
-                        break
-            if not contained:
-                keep.append((scores[i], labels[i], result["boxes"][i]))
+                x1j, y1j, x2j, y2j = b_j
+                contains_i_in_j = (
+                    x1j - margin_pixels <= x1i
+                    and y1j - margin_pixels <= y1i
+                    and x2j + margin_pixels >= x2i
+                    and y2j + margin_pixels >= y2i
+                )
+                if not contains_i_in_j:
+                    continue
+                area_j = (x2j - x1j) * (y2j - y1j)
+                if area_j > area_i * 1.1:
+                    if prefer_inner:
+                        suppress.add(j)
+                    else:
+                        suppress.add(i)
+
+        keep = [
+            (scores[i], labels[i], result["boxes"][i])
+            for i in range(len(boxes))
+            if i not in suppress
+        ]
 
         if keep:
             kept_scores, kept_labels, kept_boxes = zip(*keep)
@@ -55,6 +61,7 @@ def run_docling_layout(
     image: Image.Image,
     threshold: float = 0.3,
     margin_pixels: float = 10.0,
+    prefer_inner: bool = True,
     show: bool = True,
 ):
 
@@ -70,7 +77,7 @@ def run_docling_layout(
         threshold=threshold,
     )
 
-    results = suppress_contained(results, margin_pixels=margin_pixels)
+    results = suppress_contained(results, margin_pixels=margin_pixels, prefer_inner=prefer_inner)
 
     return results
 
